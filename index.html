@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lukittu laboratorio – Python-pakopeli</title>
+<style>
+  :root{
+    --ink:#101c33;
+    --deep:#16264a;
+    --panel:#1d3059;
+    --line:#2f4a80;
+    --blue:#4472c4;
+    --brass:#f4b183;
+    --brass-hot:#e07c34;
+    --paper:#f2ece0;
+    --paper-line:#d8cdb8;
+    --ok:#8fc79a;
+    --text:#e8edf7;
+    --dim:#a3b2ce;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(120% 80% at 50% -10%, #22385f 0%, var(--ink) 60%) fixed;
+    color:var(--text);
+    font-family:var(--serif);
+    font-size:17px;
+    line-height:1.6;
+    padding:0 18px 80px;
+  }
+  .wrap{max-width:720px;margin:0 auto}
+
+  /* ---------- otsikko ---------- */
+  header{padding:44px 0 22px;text-align:center}
+  h1{
+    font-size:34px;line-height:1.15;margin:0 0 6px;
+    letter-spacing:.01em;font-weight:normal;
+  }
+  h1 .sub{display:block;font-size:15px;color:var(--brass);letter-spacing:.16em;margin-bottom:12px}
+  header p{color:var(--dim);margin:0;font-size:16px}
+
+  /* ---------- lukkorivi ---------- */
+  .track{
+    display:flex;gap:6px;justify-content:center;flex-wrap:wrap;
+    margin:26px 0 30px;
+  }
+  .pip{
+    width:34px;height:34px;border-radius:3px;
+    border:1px solid var(--line);background:var(--deep);
+    color:var(--dim);font-family:var(--mono);font-size:12px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .pip.done{background:var(--blue);border-color:var(--blue);color:#fff}
+  .pip.now{background:var(--brass);border-color:var(--brass);color:#3a2410;font-weight:bold}
+
+  /* ---------- huone ---------- */
+  .room{
+    background:var(--deep);
+    border:1px solid var(--line);
+    border-top:4px solid var(--brass);
+    border-radius:4px;
+    padding:26px 24px 24px;
+  }
+  .roomno{font-family:var(--mono);font-size:13px;color:var(--brass);margin:0 0 4px}
+  h2{font-size:26px;margin:0 0 10px;font-weight:normal}
+  .story{color:var(--dim);margin:0 0 22px;font-style:italic}
+
+  /* ---------- oppitunti ---------- */
+  .lesson{
+    background:var(--paper);color:#2a2418;
+    border-radius:3px;padding:18px 20px;margin-bottom:26px;
+    font-size:16px;
+  }
+  .lesson h3{
+    margin:0 0 10px;font-size:15px;font-weight:normal;
+    color:#7a6a4a;border-bottom:1px solid var(--paper-line);padding-bottom:8px;
+  }
+  .lesson p{margin:0 0 10px}
+  .lesson p:last-child{margin-bottom:0}
+  pre{
+    font-family:var(--mono);font-size:14.5px;line-height:1.55;
+    color:#dbe6fb;
+    background:#0f1c36;border-left:3px solid var(--brass-hot);
+    margin:10px 0;padding:10px 12px;border-radius:2px;
+    overflow-x:auto;white-space:pre;
+  }
+  code{
+    font-family:var(--mono);font-size:.94em;
+    color:#f6d3ae;background:#0f1c36;
+    padding:1px 5px;border-radius:2px;
+  }
+  .lesson pre{color:#2a2418;background:#e6ddc9}
+  .lesson code{color:#5c3b16;background:#e6ddc9}
+  .lesson-note{font-size:14.5px;color:#6b5f47}
+
+  /* ---------- lukot ---------- */
+  .lock{
+    border:1px solid var(--line);border-radius:3px;
+    padding:16px 18px;margin-bottom:12px;background:#1a2a4f;
+  }
+  .lock.solved{border-color:#3d6b4c;background:#182f2a}
+  .lock .q{margin:0 0 4px}
+  .lock .qno{font-family:var(--mono);font-size:12px;color:var(--brass);display:block;margin-bottom:6px}
+  .lock.solved .qno{color:var(--ok)}
+  .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  input[type=text]{
+    flex:1 1 180px;min-width:0;
+    font-family:var(--mono);font-size:16px;
+    padding:10px 12px;border-radius:3px;
+    border:1px solid var(--line);background:#0c1730;color:var(--text);
+  }
+  input[type=text]::placeholder{color:#6b81ad}
+  input[type=text]:disabled{color:var(--ok);border-color:#3d6b4c;background:#122421;-webkit-text-fill-color:var(--ok);opacity:1}
+  input[type=text]:focus{outline:2px solid var(--brass);outline-offset:1px;border-color:var(--brass)}
+  button{
+    font-family:var(--serif);font-size:16px;cursor:pointer;
+    padding:10px 18px;border-radius:3px;border:1px solid var(--brass);
+    background:var(--brass);color:#3a2410;
+  }
+  button:hover{background:var(--brass-hot);border-color:var(--brass-hot);color:#fff}
+  button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  button.ghost{background:transparent;color:var(--dim);border-color:var(--line)}
+  button.ghost:hover{background:var(--panel);color:var(--text);border-color:var(--dim)}
+  .msg{margin:10px 0 0;font-size:15px;min-height:1px}
+  .msg.bad{color:var(--brass)}
+  .msg.good{color:var(--ok)}
+  .hint{margin:10px 0 0;font-size:15px;color:var(--dim);border-left:2px solid var(--line);padding-left:12px}
+  .shake{animation:sh .3s}
+  @keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  /* ---------- ovi ---------- */
+  .door{
+    margin-top:22px;padding:20px;border-radius:3px;text-align:center;
+    background:#152a48;border:1px dashed var(--line);color:var(--dim);
+  }
+  .door.open{background:var(--panel);border:1px solid var(--brass);color:var(--text)}
+  .door .found{font-family:var(--mono);font-size:15px;color:var(--brass);margin:0 0 12px}
+  .keys{
+    margin:22px 0 0;text-align:center;font-family:var(--mono);
+    letter-spacing:.42em;font-size:19px;color:var(--brass);
+  }
+  .keys span.empty{color:#40598c}
+
+  /* ---------- loppu ---------- */
+  .final h2{color:var(--brass)}
+  .cheat{margin-top:34px;text-align:center}
+  .cheat button{font-size:14px;padding:7px 14px}
+  ul.recap{padding-left:20px;color:var(--dim);font-size:16px}
+  ul.recap li{margin-bottom:5px}
+  @media (prefers-reduced-motion: reduce){.shake{animation:none}}
+  @media (max-width:520px){
+    body{font-size:16px}
+    h1{font-size:27px}
+    h2{font-size:22px}
+    .room{padding:20px 16px}
+    .lesson{padding:15px 16px}
+    .keys{letter-spacing:.28em;font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1><span class="sub">L U K I T T U   L A B O R A T O R I O</span>Python-pakopeli</h1>
+  <p>Kymmenen huonetta. Jokaisessa kolme lukkoa ja yksi kirjain.<br>Vastaa oikein, niin ovi aukeaa.</p>
+</header>
+
+<div class="track" id="track"></div>
+<main id="stage"></main>
+<div class="keys" id="keys"></div>
+
+<div class="cheat">
+  <button class="ghost" id="reset">Aloita alusta</button>
+</div>
+
+</div>
+
+<script>
+const ROOMS = [
+  {
+    no:"2.1", title:"Ensimmäinen koodi", letter:"K",
+    story:"Ovi on kiinni. Seinässä hehkuu ruutu, jolla vilkkuu kohdistin.",
+    lesson:`<p><code>print()</code> tulostaa ruudulle sen, mitä sulkujen sisään laittaa. Teksti kirjoitetaan lainausmerkkeihin, luvut ilman.</p>
+      <pre>print("Ovi aukeaa")
+print(3 + 4)</pre>
+      <p>Python toimii myös laskimena: <code>+ - * /</code>.</p>
+      <p class="lesson-note">Jos koodissa on virhe, Python kertoo virheilmoituksessa virhetyypin ja mistä kohtaa se ei ymmärtänyt.</p>`,
+    locks:[
+      { q:`Mitä ruudulle tulostuu?<pre>print("Salasana on kissa")</pre>`,
+        a:["salasana on kissa"], hint:"print tulostaa lainausmerkkien välissä olevan tekstin sellaisenaan — ilman lainausmerkkejä." },
+      { q:`Mikä luku tulostuu?<pre>print(6 * 7)</pre>`,
+        a:["42"], hint:"Ilman lainausmerkkejä Python laskee. Kuusi kertaa seitsemän." },
+      { q:`Python huutaa. Minkä nimisestä asiasta se valittaa?<pre>NameError: name 'avain' is not defined</pre>`,
+        a:["avain","'avain'"], hint:"Katso heittomerkkien sisään: siinä on nimi, jota Python ei tunne." }
+    ]
+  },
+  {
+    no:"2.2", title:"Muuttujat", letter:"O",
+    story:"Seuraavassa huoneessa on lokerikko. Jokaisessa lokerossa on nimilappu.",
+    lesson:`<p>Muuttuja on nimilappu arvolle. Nimi vasemmalle, yhtäsuuruusmerkki, arvo oikealle.</p>
+      <pre>koodi = 12
+print(koodi)</pre>
+      <p>Arvon voi vaihtaa milloin vain, ja uusi arvo voi perustua vanhaan.</p>
+      <pre>koodi = koodi + 1   # nyt koodi on 13</pre>
+      <p class="lesson-note">Tekstejä yhdistetään plussalla: <code>"Hei " + nimi</code>.</p>`,
+    locks:[
+      { q:`Mitä tulostuu?<pre>luukku = 7
+print(luukku)</pre>`,
+        a:["7"], hint:"Muuttuja palauttaa sen arvon, joka siihen viimeksi tallennettiin." },
+      { q:`Mitä tulostuu?<pre>pisteet = 5
+pisteet = pisteet + 3
+print(pisteet)</pre>`,
+        a:["8"], hint:"Ensin 5. Sitten siihen lisätään 3 ja tulos tallennetaan takaisin samalla nimellä." },
+      { q:`Mitä tulostuu?<pre>nimi = "Ada"
+print("Hei " + nimi)</pre>`,
+        a:["hei ada"], hint:"Plussa liittää tekstit peräkkäin. Huomaa väli sanan Hei jälkeen." }
+    ]
+  },
+  {
+    no:"2.3", title:"Datatyypit", letter:"O",
+    story:"Lattiassa on kolme luukkua: kokonaisluku, desimaaliluku ja teksti.",
+    lesson:`<p>Jokaisella arvolla on tyyppi. Neljä tavallisinta:</p>
+      <pre>int    kokonaisluku      7
+float  desimaaliluku    3.5
+str    teksti           "7"
+bool   totuusarvo       True</pre>
+      <p>Tyypin voi tarkistaa funktiolla <code>type()</code>.</p>
+      <p class="lesson-note">Lainausmerkit ratkaisevat: <code>7</code> on luku, <code>"7"</code> on teksti. Tekstillä ei voi laskea.</p>`,
+    locks:[
+      { q:`Mikä on arvon <code>25</code> tyyppi? Kirjoita Pythonin lyhenne.`,
+        a:["int"], hint:"Kokonaisluku, englanniksi integer. Kolme kirjainta." },
+      { q:`Mikä on arvon <code>3.5</code> tyyppi?`,
+        a:["float"], hint:"Desimaaliluku eli liukuluku. Viisi kirjainta, alkaa f-kirjaimella." },
+      { q:`Mikä on arvon <code>"42"</code> tyyppi? Huomaa lainausmerkit.`,
+        a:["str"], hint:"Lainausmerkeissä oleva on tekstiä, vaikka näyttäisi luvulta. Englanniksi string." }
+    ]
+  },
+  {
+    no:"2.4", title:"Listat ja sanakirjat", letter:"D",
+    story:"Kaapissa on laatikko tavaroita ja vieressä avainrengas, jossa jokaisella avaimella on nimi.",
+    lesson:`<p>Lista pitää monta arvoa järjestyksessä. Hakasulkeet.</p>
+      <pre>aarteet = ["kolikko", "avain", "kartta"]
+print(aarteet[0])   # kolikko</pre>
+      <p><strong>Numerointi alkaa nollasta</strong>, joten toinen alkio on paikassa 1.</p>
+      <p>Sanakirjassa arvolla on nimi eikä numero. Aaltosulkeet.</p>
+      <pre>koodit = {"ovi": 77, "kaappi": 12}
+print(koodit["ovi"])   # 77</pre>`,
+    locks:[
+      { q:`Mitä tulostuu?<pre>aarteet = ["kolikko", "avain", "kartta"]
+print(aarteet[2])</pre>`,
+        a:["kartta"], hint:"Laske nollasta: 0 kolikko, 1 avain, 2 on siis kolmas." },
+      { q:`Millä numerolla saat listasta sanan <code>avain</code>? Kirjoita pelkkä numero.<pre>aarteet = ["kolikko", "avain", "kartta"]</pre>`,
+        a:["1"], hint:"Ensimmäinen on 0, joten toinen on..." },
+      { q:`Mitä tulostuu?<pre>koodit = {"ovi": 77, "kaappi": 12}
+print(koodit["kaappi"])</pre>`,
+        a:["12"], hint:"Haetaan nimellä kaappi. Katso mikä luku on sen perässä." }
+    ]
+  },
+  {
+    no:"2.5", title:"Funktioiden kutsuminen", letter:"I",
+    story:"Seinässä on rivi painikkeita. Jokaisen vieressä on kolo, johon syötetään jotain.",
+    lesson:`<p>Funktio on valmis toiminto. Kutsuminen = nimi ja sulut. Sulkujen sisään menevät argumentit, ja funktio palauttaa tuloksen.</p>
+      <pre>len("avain")      # 5  – montako merkkiä
+max([3, 9, 4])    # 9  – suurin
+round(3.7)        # 4  – pyöristys</pre>
+      <p>Osa toiminnoista kutsutaan pisteellä arvon perästä. Tätä sanotaan pistesyntaksiksi.</p>
+      <pre>"avain".upper()   # AVAIN</pre>`,
+    locks:[
+      { q:`Mikä luku tulee tulokseksi?<pre>print(len("koodi"))</pre>`,
+        a:["5"], hint:"len laskee merkkien määrän: k-o-o-d-i." },
+      { q:`Mikä luku tulee tulokseksi?<pre>print(max([3, 9, 4]))</pre>`,
+        a:["9"], hint:"max poimii listan suurimman arvon." },
+      { q:`Mitä tulostuu?<pre>print("avain".upper())</pre>`,
+        a:["avain","AVAIN"], hint:"upper muuttaa tekstin isoiksi kirjaimiksi." }
+    ]
+  },
+  {
+    no:"2.6", title:"Kirjastot ja import", letter:"V",
+    story:"Nurkassa on työkalupakkeja. Kansi on kiinni, kunnes pyydät pakkia nimeltä.",
+    lesson:`<p>Kirjasto on valmis pakkaus funktioita. Se otetaan käyttöön sanalla <code>import</code>, ja sen jälkeen funktioita kutsutaan pisteellä.</p>
+      <pre>import math
+print(math.sqrt(16))     # 4.0  – neliöjuuri
+
+import statistics
+print(statistics.mean([2, 4, 6]))   # 4  – keskiarvo</pre>
+      <p class="lesson-note">Kirjastot kirjoitetaan yleensä tiedoston alkuun.</p>`,
+    locks:[
+      { q:`Millä sanalla kirjasto otetaan käyttöön? Kirjoita pelkkä sana.`,
+        a:["import"], hint:"Se on rivin ensimmäinen sana esimerkeissä yllä." },
+      { q:`Mikä luku tulostuu?<pre>import math
+print(math.sqrt(81))</pre>`,
+        a:["9","9.0"], hint:"Minkä luvun kertominen itsellään antaa 81?" },
+      { q:`Mikä luku tulostuu?<pre>import statistics
+print(statistics.mean([4, 6, 8]))</pre>`,
+        a:["6","6.0"], hint:"Keskiarvo: laske yhteen ja jaa kolmella." }
+    ]
+  },
+  {
+    no:"2.7", title:"Vertailut ja ehdot", letter:"E",
+    story:"Ovessa on mittari, jonka neula kääntyy joko sanaan True tai sanaan False.",
+    lesson:`<p>Vertailu on kysymys, johon Python vastaa <code>True</code> tai <code>False</code>.</p>
+      <pre>10 > 3       # True   suurempi
+5 == 6       # False  yhtä suuri (kaksi =-merkkiä!)
+5 != 6       # True   eri suuri
+"avain" in ["kartta", "avain"]   # True  kuuluu joukkoon</pre>
+      <p class="lesson-note">Yksi <code>=</code> tallentaa arvon, kaksi <code>==</code> vertailee.</p>`,
+    locks:[
+      { q:`True vai False?<pre>print(10 > 3)</pre>`,
+        a:["true"], hint:"Onko kymmenen suurempi kuin kolme?" },
+      { q:`True vai False?<pre>print(5 == 6)</pre>`,
+        a:["false"], hint:"Kaksi yhtäsuuruusmerkkiä kysyy: ovatko nämä sama luku?" },
+      { q:`True vai False?<pre>print("avain" in ["kartta", "avain"])</pre>`,
+        a:["true"], hint:"in kysyy, löytyykö arvo listasta." }
+    ]
+  },
+  {
+    no:"2.8", title:"if / elif / else ja sisennys", letter:"L",
+    story:"Käytävä haarautuu. Kumpi ovi aukeaa, riippuu lämpömittarin lukemasta.",
+    lesson:`<p><code>if</code> tekee jotain vain, jos ehto on tosi. <code>else</code> hoitaa muut tapaukset, <code>elif</code> lisävaihtoehdot.</p>
+      <pre>lampo = 30
+if lampo > 25:
+    print("kuuma")
+else:
+    print("viilea")</pre>
+      <p>Sisennys eli rivin alun tyhjä tila kertoo, mikä koodi kuuluu ehdon sisälle. Sisentämätön rivi suoritetaan aina.</p>`,
+    locks:[
+      { q:`Mitä tulostuu?<pre>lampo = 30
+if lampo > 25:
+    print("kuuma")
+else:
+    print("viilea")</pre>`,
+        a:["kuuma"], hint:"Onko 30 suurempi kuin 25? Jos on, if-haara suoritetaan." },
+      { q:`Mitä tulostuu?<pre>pisteet = 50
+if pisteet > 80:
+    print("kiitettava")
+elif pisteet > 40:
+    print("hyva")
+else:
+    print("hylatty")</pre>`,
+        a:["hyva","hyvä"], hint:"Ensimmäinen ehto ei toteudu. Siirrytään elif-riville: onko 50 > 40?" },
+      { q:`Mitä tulostuu? Varo sisennystä.<pre>pisteet = 40
+if pisteet > 50:
+    print("Lapi")
+print("Valmis")</pre>`,
+        a:["valmis"], hint:"Ehto ei toteudu, joten sisennetty rivi jää väliin. Viimeinen rivi ei ole ehdon sisällä." }
+    ]
+  },
+  {
+    no:"2.9", title:"for-silmukka", letter:"H",
+    story:"Portaikko. Jokaisella askelmalla sama koneisto naksahtaa kerran.",
+    lesson:`<p><code>for</code> toistaa saman toimenpiteen listan jokaiselle alkiolle. Sisennetty osa on se, mikä toistuu.</p>
+      <pre>for luku in [1, 2, 3]:
+    print(luku * 2)
+
+# tulostaa 2, sitten 4, sitten 6</pre>
+      <p>Yleinen tapa on kerätä tulos muuttujaan:</p>
+      <pre>summa = 0
+for luku in [5, 10]:
+    summa = summa + luku
+print(summa)   # 15</pre>`,
+    locks:[
+      { q:`Mikä luku tulostuu <strong>viimeisenä</strong>?<pre>for luku in [1, 2, 3]:
+    print(luku * 2)</pre>`,
+        a:["6"], hint:"Viimeinen kierros käsittelee luvun 3." },
+      { q:`Montako riviä tulostuu?<pre>for kirjain in "ovi":
+    print(kirjain)</pre>`,
+        a:["3","kolme"], hint:"Silmukka käy tekstin merkki kerrallaan: o, v, i." },
+      { q:`Mitä tulostuu?<pre>summa = 0
+for luku in [5, 10, 15]:
+    summa = summa + luku
+print(summa)</pre>`,
+        a:["30"], hint:"Laske luvut yhteen: 5 + 10 + 15." }
+    ]
+  },
+  {
+    no:"2.10", title:"Oman funktion tekeminen", letter:"O",
+    story:"Viimeinen huone. Pöydällä on tyhjä kotelo ja lappu: rakenna työkalu itse.",
+    lesson:`<p>Omalla funktiolla paketoit koodin nimen taakse ja voit käyttää sitä uudelleen.</p>
+      <pre>def tuplaa(luku):
+    return luku * 2
+
+print(tuplaa(21))   # 42</pre>
+      <p><code>def</code> aloittaa määrittelyn, sulkeissa on parametri ja <code>return</code> antaa tuloksen takaisin. Funktio ei tee mitään ennen kuin sitä kutsutaan.</p>`,
+    locks:[
+      { q:`Millä sanalla oma funktio määritellään? Kirjoita pelkkä sana.`,
+        a:["def"], hint:"Kolme kirjainta, lyhenne sanasta define." },
+      { q:`Mikä luku tulostuu?<pre>def tuplaa(luku):
+    return luku * 2
+
+print(tuplaa(50))</pre>`,
+        a:["100"], hint:"Funktio saa luvun 50 ja kertoo sen kahdella." },
+      { q:`Mitä tulostuu?<pre>def tervehdi(nimi):
+    return "Hei " + nimi
+
+print(tervehdi("Iiro"))</pre>`,
+        a:["hei iiro"], hint:"Parametri nimi saa arvon Iiro, ja se liitetään tekstin perään." }
+    ]
+  }
+];
+
+const FINAL_WORD = ROOMS.map(r => r.letter).join("");
+
+let idx = 0;              // nykyinen huone
+let solved = [];          // ratkaistut lukot nykyisessä huoneessa
+let escaped = false;
+
+const stage = document.getElementById("stage");
+const track = document.getElementById("track");
+const keysEl = document.getElementById("keys");
+
+function norm(s){
+  return s.toLowerCase().trim()
+    .replace(/[."'!?]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function drawTrack(){
+  track.innerHTML = "";
+  ROOMS.forEach((r, i) => {
+    const d = document.createElement("div");
+    d.className = "pip" + (i < idx || escaped ? " done" : (i === idx && !escaped ? " now" : ""));
+    d.textContent = i + 1;
+    d.title = r.no + " " + r.title;
+    track.appendChild(d);
+  });
+}
+
+function drawKeys(){
+  keysEl.innerHTML = ROOMS.map((r, i) =>
+    (i < idx || escaped) ? r.letter : '<span class="empty">·</span>'
+  ).join("");
+}
+
+function drawRoom(){
+  const r = ROOMS[idx];
+  stage.innerHTML = `
+    <section class="room">
+      <p class="roomno">Huone ${idx + 1} / 10 · osa ${r.no}</p>
+      <h2>${r.title}</h2>
+      <p class="story">${r.story}</p>
+      <div class="lesson">
+        <h3>Näin se toimii</h3>
+        ${r.lesson}
+      </div>
+      <div id="locks"></div>
+      <div class="door" id="door"></div>
+    </section>`;
+
+  const locksEl = document.getElementById("locks");
+  r.locks.forEach((l, i) => {
+    const box = document.createElement("div");
+    box.className = "lock";
+    box.id = "lock" + i;
+    box.innerHTML = `
+      <span class="qno">Lukko ${i + 1}</span>
+      <div class="q">${l.q}</div>
+      <div class="row">
+        <input type="text" id="in${i}" autocomplete="off" spellcheck="false" placeholder="vastauksesi">
+        <button id="chk${i}">Tarkista</button>
+        <button class="ghost" id="hint${i}">Vihje</button>
+      </div>
+      <p class="msg" id="msg${i}"></p>`;
+    locksEl.appendChild(box);
+
+    document.getElementById("chk" + i).onclick = () => check(i);
+    document.getElementById("in" + i).addEventListener("keydown", e => {
+      if (e.key === "Enter") check(i);
+    });
+    document.getElementById("hint" + i).onclick = () => {
+      const m = document.getElementById("msg" + i);
+      if (!box.classList.contains("solved")){
+        m.className = "hint";
+        m.textContent = l.hint;
+      }
+    };
+  });
+
+  drawDoor();
+  drawTrack();
+  drawKeys();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function check(i){
+  const r = ROOMS[idx];
+  const box = document.getElementById("lock" + i);
+  if (box.classList.contains("solved")) return;
+
+  const val = document.getElementById("in" + i).value;
+  const msg = document.getElementById("msg" + i);
+  if (!val.trim()){
+    msg.className = "msg bad";
+    msg.textContent = "Kirjoita vastaus kenttään ja paina Tarkista.";
+    return;
+  }
+
+  const ok = r.locks[i].a.some(a => norm(a) === norm(val));
+  if (ok){
+    box.classList.add("solved");
+    solved.push(i);
+    msg.className = "msg good";
+    msg.textContent = "Naks. Lukko aukesi.";
+    document.getElementById("in" + i).disabled = true;
+    document.getElementById("chk" + i).remove();
+    document.getElementById("hint" + i).remove();
+    drawDoor();
+  } else {
+    msg.className = "msg bad";
+    msg.textContent = "Lukko ei liiku. Lue koodi rivi kerrallaan ja kokeile uudestaan.";
+    box.classList.remove("shake");
+    void box.offsetWidth;
+    box.classList.add("shake");
+  }
+}
+
+function drawDoor(){
+  const r = ROOMS[idx];
+  const door = document.getElementById("door");
+  const left = r.locks.length - solved.length;
+
+  if (left > 0){
+    door.className = "door";
+    door.innerHTML = `Ovi on lukossa. Avaamatta ${left} ${left === 1 ? "lukko" : "lukkoa"}.`;
+    return;
+  }
+
+  door.className = "door open";
+  const last = idx === ROOMS.length - 1;
+  door.innerHTML = `
+    <p class="found">Lattialta löytyy kirjain: ${r.letter}</p>
+    <button id="next">${last ? "Siirry viimeiselle ovelle" : "Avaa ovi ja jatka"}</button>`;
+  document.getElementById("next").onclick = () => {
+    idx++;
+    solved = [];
+    if (idx < ROOMS.length) drawRoom(); else drawFinal();
+  };
+}
+
+function drawFinal(){
+  stage.innerHTML = `
+    <section class="room final">
+      <p class="roomno">Ulko-ovi</p>
+      <h2>Viimeinen lukko</h2>
+      <p class="story">Ulko-ovessa on kymmenen kirjaimen koodilukko. Keräsit matkalla kymmenen kirjainta.</p>
+      <div class="lock">
+        <span class="qno">Koodilukko</span>
+        <div class="q">Kirjoita huoneista löytyneet kirjaimet järjestyksessä yhdeksi sanaksi.</div>
+        <div class="row">
+          <input type="text" id="fin" autocomplete="off" spellcheck="false" placeholder="kymmenen kirjainta">
+          <button id="finchk">Avaa ovi</button>
+        </div>
+        <p class="msg" id="finmsg"></p>
+      </div>
+    </section>`;
+  drawTrack();
+  drawKeys();
+  window.scrollTo({top:0, behavior:"smooth"});
+
+  const go = () => {
+    const v = document.getElementById("fin").value;
+    const m = document.getElementById("finmsg");
+    if (norm(v) === norm(FINAL_WORD)){
+      escaped = true;
+      drawEscaped();
+    } else {
+      m.className = "msg bad";
+      m.textContent = "Ei aukea. Kirjaimet näkyvät sivun alalaidassa.";
+    }
+  };
+  document.getElementById("finchk").onclick = go;
+  document.getElementById("fin").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+}
+
+function drawEscaped(){
+  stage.innerHTML = `
+    <section class="room final">
+      <p class="roomno">Ulkona</p>
+      <h2>Pääsit ulos</h2>
+      <p class="story">Ovi aukeaa. Koodi oli ${FINAL_WORD}.</p>
+      <div class="lesson">
+        <h3>Mitä tuli matkalla opittua</h3>
+        <ul class="recap">
+          ${ROOMS.map(r => `<li>${r.no} ${r.title}</li>`).join("")}
+        </ul>
+        <p class="lesson-note">Seuraava askel: kirjoita samat esimerkit itse editoriin tai Pythonin tulkkiin. Koodi jää mieleen vasta, kun sormet kirjoittavat sen.</p>
+      </div>
+      <div class="door open">
+        <button id="again">Pelaa uudestaan</button>
+      </div>
+    </section>`;
+  drawTrack();
+  drawKeys();
+  document.getElementById("again").onclick = restart;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function restart(){
+  idx = 0; solved = []; escaped = false;
+  drawRoom();
+}
+
+document.getElementById("reset").onclick = restart;
+drawRoom();
+</script>
+</body>
+</html>
