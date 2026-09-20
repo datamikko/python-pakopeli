@@ -56,6 +56,12 @@
   }
   .pip.done{background:var(--blue);border-color:var(--blue);color:#fff}
   .pip.now{background:var(--brass);border-color:var(--brass);color:#3a2410;font-weight:bold}
+  .pip.done{cursor:pointer}
+  .pip.done:hover{background:#5b8ad8;border-color:#5b8ad8}
+  .pip.now.back{cursor:pointer}
+  .pip.view{outline:2px solid var(--brass);outline-offset:2px}
+  .tracknote{text-align:center;color:var(--dim);font-size:14px;margin:-18px 0 26px}
+  .room.past{border-top-color:var(--blue)}
 
   /* ---------- huone ---------- */
   .room{
@@ -171,6 +177,7 @@
 </header>
 
 <div class="track" id="track"></div>
+<p class="tracknote" id="tracknote"></p>
 <main id="stage"></main>
 <div class="keys" id="keys"></div>
 
@@ -409,6 +416,7 @@ let idx = 0;              // nykyinen huone
 let solved = [];          // ratkaistut lukot nykyisessä huoneessa
 let answers = {};         // ratkaistujen lukkojen vastaukset (lukon nro -> teksti)
 let escaped = false;
+let view = null;          // katseltava vanha huone (null = nykyinen tilanne)
 
 const SAVE_KEY = "pakopeli-tila";
 
@@ -442,12 +450,24 @@ function norm(s){
 function drawTrack(){
   track.innerHTML = "";
   ROOMS.forEach((r, i) => {
+    const done = i < idx || escaped;
     const d = document.createElement("div");
-    d.className = "pip" + (i < idx || escaped ? " done" : (i === idx && !escaped ? " now" : ""));
+    d.className = "pip" + (done ? " done" : (i === idx ? " now" : ""))
+      + (view === i ? " view" : "")
+      + (view !== null && i === idx ? " back" : "");
     d.textContent = i + 1;
     d.title = r.no + " " + r.title;
+    if (done && i !== view){
+      d.onclick = () => { view = i; draw(); };
+    } else if (view !== null && i === idx){
+      d.onclick = () => { view = null; draw(); };
+    }
     track.appendChild(d);
   });
+  const note = document.getElementById("tracknote");
+  note.textContent = (idx > 0 || escaped) && view === null
+    ? "Napauta avattua huonetta, niin pääset katsomaan sitä uudestaan."
+    : "";
 }
 
 function drawKeys(){
@@ -457,10 +477,12 @@ function drawKeys(){
 }
 
 function drawRoom(){
-  const r = ROOMS[idx];
+  const past = view !== null;
+  const ri = past ? view : idx;
+  const r = ROOMS[ri];
   stage.innerHTML = `
-    <section class="room">
-      <p class="roomno">Huone ${idx + 1} / 10 · osa ${r.no}</p>
+    <section class="room${past ? " past" : ""}">
+      <p class="roomno">Huone ${ri + 1} / 10 · osa ${r.no}${past ? " · avattu" : ""}</p>
       <h2>${r.title}</h2>
       <p class="story">${r.story}</p>
       <div class="lesson">
@@ -487,6 +509,10 @@ function drawRoom(){
       <p class="msg" id="msg${i}"></p>`;
     locksEl.appendChild(box);
 
+    if (past){
+      markSolved(i, l.a[0]);
+      return;
+    }
     if (solved.includes(i)){
       markSolved(i, answers[i] ?? l.a[0]);
       return;
@@ -505,7 +531,16 @@ function drawRoom(){
     };
   });
 
-  drawDoor();
+  if (past){
+    const door = document.getElementById("door");
+    door.className = "door open";
+    door.innerHTML = `
+      <p class="found">Tämän huoneen kirjain: ${r.letter}</p>
+      <button id="back">Palaa nykyiseen tilanteeseen</button>`;
+    document.getElementById("back").onclick = () => { view = null; draw(); };
+  } else {
+    drawDoor();
+  }
   drawTrack();
   drawKeys();
   window.scrollTo({top:0, behavior:"smooth"});
@@ -638,13 +673,14 @@ function drawEscaped(){
 }
 
 function restart(){
-  idx = 0; solved = []; answers = {}; escaped = false;
+  idx = 0; solved = []; answers = {}; escaped = false; view = null;
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   drawRoom();
 }
 
 function draw(){
-  if (escaped) drawEscaped();
+  if (view !== null) drawRoom();
+  else if (escaped) drawEscaped();
   else if (idx >= ROOMS.length) drawFinal();
   else drawRoom();
 }
