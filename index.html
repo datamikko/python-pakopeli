@@ -407,7 +407,27 @@ const FINAL_WORD = ROOMS.map(r => r.letter).join("");
 
 let idx = 0;              // nykyinen huone
 let solved = [];          // ratkaistut lukot nykyisessä huoneessa
+let answers = {};         // ratkaistujen lukkojen vastaukset (lukon nro -> teksti)
 let escaped = false;
+
+const SAVE_KEY = "pakopeli-tila";
+
+function save(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({idx, solved, answers, escaped}));
+  } catch (e) {}
+}
+
+function load(){
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!d || typeof d.idx !== "number") return;
+    idx = Math.min(Math.max(0, d.idx), ROOMS.length);
+    solved = Array.isArray(d.solved) ? d.solved.filter(n => Number.isInteger(n)) : [];
+    answers = (d.answers && typeof d.answers === "object") ? d.answers : {};
+    escaped = !!d.escaped;
+  } catch (e) {}
+}
 
 const stage = document.getElementById("stage");
 const track = document.getElementById("track");
@@ -467,6 +487,11 @@ function drawRoom(){
       <p class="msg" id="msg${i}"></p>`;
     locksEl.appendChild(box);
 
+    if (solved.includes(i)){
+      markSolved(i, answers[i] ?? l.a[0]);
+      return;
+    }
+
     document.getElementById("chk" + i).onclick = () => check(i);
     document.getElementById("in" + i).addEventListener("keydown", e => {
       if (e.key === "Enter") check(i);
@@ -501,13 +526,10 @@ function check(i){
 
   const ok = r.locks[i].a.some(a => norm(a) === norm(val));
   if (ok){
-    box.classList.add("solved");
     solved.push(i);
-    msg.className = "msg good";
-    msg.textContent = "Naks. Lukko aukesi.";
-    document.getElementById("in" + i).disabled = true;
-    document.getElementById("chk" + i).remove();
-    document.getElementById("hint" + i).remove();
+    answers[i] = val;
+    markSolved(i, val);
+    save();
     drawDoor();
   } else {
     msg.className = "msg bad";
@@ -516,6 +538,19 @@ function check(i){
     void box.offsetWidth;
     box.classList.add("shake");
   }
+}
+
+function markSolved(i, val){
+  const box = document.getElementById("lock" + i);
+  const input = document.getElementById("in" + i);
+  const msg = document.getElementById("msg" + i);
+  box.classList.add("solved");
+  input.value = val;
+  input.disabled = true;
+  msg.className = "msg good";
+  msg.textContent = "Naks. Lukko aukesi.";
+  document.getElementById("chk" + i).remove();
+  document.getElementById("hint" + i).remove();
 }
 
 function drawDoor(){
@@ -537,6 +572,8 @@ function drawDoor(){
   document.getElementById("next").onclick = () => {
     idx++;
     solved = [];
+    answers = {};
+    save();
     if (idx < ROOMS.length) drawRoom(); else drawFinal();
   };
 }
@@ -566,6 +603,7 @@ function drawFinal(){
     const m = document.getElementById("finmsg");
     if (norm(v) === norm(FINAL_WORD)){
       escaped = true;
+      save();
       drawEscaped();
     } else {
       m.className = "msg bad";
@@ -600,12 +638,23 @@ function drawEscaped(){
 }
 
 function restart(){
-  idx = 0; solved = []; escaped = false;
+  idx = 0; solved = []; answers = {}; escaped = false;
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   drawRoom();
 }
 
-document.getElementById("reset").onclick = restart;
-drawRoom();
+function draw(){
+  if (escaped) drawEscaped();
+  else if (idx >= ROOMS.length) drawFinal();
+  else drawRoom();
+}
+
+document.getElementById("reset").onclick = () => {
+  const started = idx > 0 || solved.length > 0 || escaped;
+  if (!started || confirm("Aloitetaanko alusta? Tallennettu eteneminen poistetaan.")) restart();
+};
+load();
+draw();
 </script>
 </body>
 </html>
